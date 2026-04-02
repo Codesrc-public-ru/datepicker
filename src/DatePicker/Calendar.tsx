@@ -1,3 +1,15 @@
+/**
+ * Container Component — паттерн «Компонент-контейнер».
+ *
+ * Отвечает за всю нетривиальную логику диалога:
+ *  - управление фокусом (mount → dialog → grid cell)
+ *  - live-регион для объявления смены месяца скринридером
+ *  - закрытие по клику вне области
+ *  - обработка клавиатуры (Event Switch)
+ *  - вычисление данных грида через useCalendarGrid
+ *
+ * Рендер делегирует атомарным компонентам NavButton и DayButton.
+ */
 import React, {
   KeyboardEvent,
   useEffect,
@@ -14,11 +26,13 @@ import {
   endOfWeek,
   startOfWeek,
 } from './utils/dateUtils';
-import { getFirstDayOfWeek } from './utils/intlUtils';
+import { getFirstDayOfWeek, getUiString } from './utils/intlUtils';
+import { NavButton } from './NavButton';
+import { DayButton } from './DayButton';
 import type { CalendarCell } from './types';
 import styles from './Calendar.module.css';
 
-interface CalendarProps {
+export interface CalendarProps {
   viewYear: number;
   viewMonth: number;
   selectedDate: Date | undefined;
@@ -58,16 +72,50 @@ export function Calendar(props: CalendarProps): React.ReactElement {
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const tbodyRef = useRef<HTMLTableSectionElement | null>(null);
+  const monthChangedByNavRef = useRef(false);
+  const [liveText, setLiveText] = React.useState('');
 
-  // Activate focus trap for the entire dialog lifetime.
+  const i18n = {
+    prevMonth: getUiString(locale, 'prevMonth'),
+    nextMonth: getUiString(locale, 'nextMonth'),
+    ok: getUiString(locale, 'ok'),
+    cancel: getUiString(locale, 'cancel'),
+    unavailable: getUiString(locale, 'unavailable'),
+  };
+
   useFocusTrap(dialogRef, true);
 
-  // Focus the roving-tabindex button whenever focusedDate changes or on mount.
+  // Закрытие по клику вне диалога.
   useEffect(() => {
-    const btn = tbodyRef.current?.querySelector<HTMLElement>(
-      'button[tabindex="0"]',
-    );
-    btn?.focus();
+    function handlePointerDown(e: PointerEvent): void {
+      if (dialogRef.current && !dialogRef.current.contains(e.target as Node)) {
+        onClose(false);
+      }
+    }
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [onClose]);
+
+  // Управление фокусом:
+  //   mount  → сначала на диалог (AT объявляет «dialog: [месяц год]»),
+  //            затем requestAnimationFrame → на кнопку ячейки.
+  //   далее  → на кнопку сразу при смене focusedDate.
+  const isMountRef = useRef(true);
+
+  useEffect(() => {
+    if (isMountRef.current) {
+      isMountRef.current = false;
+      dialogRef.current?.focus();
+      requestAnimationFrame(() => {
+        tbodyRef.current
+          ?.querySelector<HTMLElement>('button[tabindex="0"]')
+          ?.focus();
+      });
+      return;
+    }
+    tbodyRef.current
+      ?.querySelector<HTMLElement>('button[tabindex="0"]')
+      ?.focus();
   }, [focusedDate]);
 
   const gridData = useCalendarGrid({
@@ -81,19 +129,28 @@ export function Calendar(props: CalendarProps): React.ReactElement {
     disabledDates,
   });
 
+  // Live-регион срабатывает только при клике на кнопки навигации,
+  // но не при переходе через границу месяца стрелкой клавиатуры.
+  useEffect(() => {
+    if (monthChangedByNavRef.current) {
+      monthChangedByNavRef.current = false;
+      setLiveText(gridData.monthYearLabel);
+    }
+  }, [gridData.monthYearLabel]);
+
   const firstDayOfWeek = getFirstDayOfWeek(locale);
 
-  // ─── Keyboard handler for grid buttons ────────────────────────────────────
-  // Attached to each <button> inside <td>. Arrow keys, Home/End, PageUp/Down,
-  // Enter/Space, and Escape are all handled here per APG spec.
-
+  // ─── Event Switch — клавиатурная навигация грида ──────────────────────────
   function handleGridKeyDown(
     e: KeyboardEvent<HTMLButtonElement>,
     cell: CalendarCell,
   ): void {
-    const { key, shiftKey } = e;
-
-    switch (key) {
+    switch (e.key) {
+      case 'Escape':
+        e.preventDefault();
+        e.stopPropagation();
+        onClose(false);
+        break;
       case 'ArrowLeft':
         e.preventDefault();
         onFocusedDateChange(clampDate(addDays(focusedDate, -1), minDate, maxDate));
@@ -126,7 +183,7 @@ export function Calendar(props: CalendarProps): React.ReactElement {
         e.preventDefault();
         onFocusedDateChange(
           clampDate(
-            shiftKey ? addYears(focusedDate, -1) : addMonths(focusedDate, -1),
+            e.shiftKey ? addYears(focusedDate, -1) : addMonths(focusedDate, -1),
             minDate,
             maxDate,
           ),
@@ -136,7 +193,7 @@ export function Calendar(props: CalendarProps): React.ReactElement {
         e.preventDefault();
         onFocusedDateChange(
           clampDate(
-            shiftKey ? addYears(focusedDate, 1) : addMonths(focusedDate, 1),
+            e.shiftKey ? addYears(focusedDate, 1) : addMonths(focusedDate, 1),
             minDate,
             maxDate,
           ),
@@ -147,16 +204,29 @@ export function Calendar(props: CalendarProps): React.ReactElement {
         e.preventDefault();
         if (!cell.isDisabled) onConfirm(cell.date);
         break;
-      case 'Escape':
-        e.preventDefault();
-        onClose(false);
-        break;
       default:
         break;
     }
   }
 
-  // ─── OK button ────────────────────────────────────────────────────────────
+  function handleDialogKeyDown(e: KeyboardEvent<HTMLElement>): void {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      onClose(false);
+    }
+  }
+
+  function handlePrevMonth(): void {
+    monthChangedByNavRef.current = true;
+    onPrevMonth();
+  }
+
+  function handleNextMonth(): void {
+    monthChangedByNavRef.current = true;
+    onNextMonth();
+  }
+
   const focusedCellDisabled =
     gridData.rows.flat().find((c) => c.isFocused)?.isDisabled ?? false;
 
@@ -164,72 +234,43 @@ export function Calendar(props: CalendarProps): React.ReactElement {
     if (!focusedCellDisabled) onConfirm(focusedDate);
   }
 
-  // ─── CSS class helpers ────────────────────────────────────────────────────
-  function tdClass(cell: CalendarCell): string {
-    return [
-      styles.td,
-      !cell.isCurrentMonth && styles.tdOutside,
-    ]
-      .filter(Boolean)
-      .join(' ');
-  }
-
-  function btnClass(cell: CalendarCell): string {
-    return [
-      styles.dayButton,
-      cell.isToday && styles.dayButtonToday,
-      cell.isSelected && styles.dayButtonSelected,
-      cell.isDisabled && styles.dayButtonDisabled,
-    ]
-      .filter(Boolean)
-      .join(' ');
-  }
-
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div
       ref={dialogRef}
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
+      tabIndex={-1}
+      onKeyDown={handleDialogKeyDown}
       className={styles.dialog}
     >
-      {/* ── Header ── */}
-      <div className={styles.header}>
-        <button
-          type="button"
-          aria-label="Previous month"
-          disabled={isPrevMonthDisabled}
-          onClick={onPrevMonth}
-          className={styles.navButton}
-        >
-          <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M10.354 3.646a.5.5 0 0 1 0 .708L6.707 8l3.647 3.646a.5.5 0 0 1-.708.708l-4-4a.5.5 0 0 1 0-.708l4-4a.5.5 0 0 1 .708 0z" />
-          </svg>
-        </button>
+      {/* Скрытый assertive live-регион: объявляет смену месяца только
+          при клике на кнопки навигации. */}
+      <span role="status" aria-live="assertive" aria-atomic="true" className={styles.srOnly}>
+        {liveText}
+      </span>
 
-        <h2
-          id={titleId}
-          aria-live="polite"
-          aria-atomic="true"
-          className={styles.monthYearHeading}
-        >
+      <div className={styles.header}>
+        <NavButton
+          direction="prev"
+          label={i18n.prevMonth}
+          disabled={isPrevMonthDisabled}
+          onClick={handlePrevMonth}
+        />
+
+        <h2 id={titleId} className={styles.monthYearHeading}>
           {gridData.monthYearLabel}
         </h2>
 
-        <button
-          type="button"
-          aria-label="Next month"
+        <NavButton
+          direction="next"
+          label={i18n.nextMonth}
           disabled={isNextMonthDisabled}
-          onClick={onNextMonth}
-          className={styles.navButton}
-        >
-          <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M5.646 3.646a.5.5 0 0 0 0 .708L9.293 8 5.646 11.646a.5.5 0 0 0 .708.708l4-4a.5.5 0 0 0 0-.708l-4-4a.5.5 0 0 0-.708 0z" />
-          </svg>
-        </button>
+          onClick={handleNextMonth}
+        />
       </div>
 
-      {/* ── Grid ── */}
       <table role="grid" aria-labelledby={titleId} className={styles.table}>
         <thead>
           <tr>
@@ -241,33 +282,27 @@ export function Calendar(props: CalendarProps): React.ReactElement {
           </tr>
         </thead>
         <tbody ref={tbodyRef}>
+          {/* Array as Children — паттерн «Массив как дочерние элементы» */}
           {gridData.rows.map((row, rowIdx) => (
             <tr key={rowIdx}>
               {row.map((cell) => (
-                /*
-                 * APG pattern: <td role="gridcell"> carries selection/state aria
-                 * attributes; the <button> inside is the interactive element and
-                 * holds the roving tabindex + aria-label for screen readers.
-                 */
                 <td
                   key={cell.date.toISOString()}
                   role="gridcell"
                   aria-selected={cell.isSelected}
                   aria-disabled={cell.isDisabled ? true : undefined}
                   aria-current={cell.isToday ? 'date' : undefined}
-                  className={tdClass(cell)}
+                  className={[
+                    styles.td,
+                    !cell.isCurrentMonth && styles.tdOutside,
+                  ].filter(Boolean).join(' ')}
                 >
-                  <button
-                    type="button"
-                    tabIndex={cell.isFocused ? 0 : -1}
-                    aria-label={cell.ariaLabel}
-                    data-date={cell.date.toISOString()}
+                  <DayButton
+                    cell={cell}
+                    unavailableLabel={i18n.unavailable}
                     onKeyDown={(e) => handleGridKeyDown(e, cell)}
-                    onClick={() => !cell.isDisabled && onConfirm(cell.date)}
-                    className={btnClass(cell)}
-                  >
-                    {cell.date.getDate()}
-                  </button>
+                    onConfirm={onConfirm}
+                  />
                 </td>
               ))}
             </tr>
@@ -275,7 +310,6 @@ export function Calendar(props: CalendarProps): React.ReactElement {
         </tbody>
       </table>
 
-      {/* ── Footer ── */}
       <div className={styles.footer}>
         <button
           type="button"
@@ -283,14 +317,14 @@ export function Calendar(props: CalendarProps): React.ReactElement {
           disabled={focusedCellDisabled}
           className={styles.okButton}
         >
-          OK
+          {i18n.ok}
         </button>
         <button
           type="button"
           onClick={() => onClose(false)}
           className={styles.cancelButton}
         >
-          Cancel
+          {i18n.cancel}
         </button>
       </div>
     </div>

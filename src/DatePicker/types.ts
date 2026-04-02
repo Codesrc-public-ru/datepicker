@@ -1,6 +1,7 @@
 export interface DatePickerProps {
-  value?: Date;
-  onChange: (date: Date) => void;
+  value?: Date | null;
+  /** Called with null when the user clears the input. */
+  onChange: (date: Date | null) => void;
   minDate?: Date;
   maxDate?: Date;
   /** Caller should memoize this array to avoid unnecessary re-renders */

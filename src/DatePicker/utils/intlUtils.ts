@@ -117,20 +117,24 @@ export function getFormatHint(locale: string): string {
     month: '2-digit',
     day: '2-digit',
   }).formatToParts(knownDate);
+  type DateFormatPart = 'year' | 'month' | 'day';
+  const partsNames: Record<DateFormatPart, string> = locale === 'ru-RU' ? {
+    year: 'ГГГГ',
+    month: 'ММ',
+    day: 'ДД',
+  } : {
+    year: 'YYYY',
+    month: 'MM',
+    day: 'DD',
+  };
+  const isDatePart = (type: string): type is DateFormatPart => [
+    'year',
+    'month',
+    'day',
+  ].includes(type);
 
   return parts
-    .map((p) => {
-      switch (p.type) {
-        case 'year':
-          return 'YYYY';
-        case 'month':
-          return 'MM';
-        case 'day':
-          return 'DD';
-        default:
-          return p.value;
-      }
-    })
+    .map((p) => isDatePart(p.type) ? partsNames[p.type] : p.value)
     .join('');
 }
 
@@ -214,11 +218,75 @@ export function parseShortDate(str: string, locale: string): Date | null {
  *       "Выбрать дату" (when no date selected, locale ru-RU)
  */
 export function formatTriggerAriaLabel(
-  date: Date | undefined,
+  date: Date | null | undefined,
   locale: string,
 ): string {
-  // Simple bilingual fallback — the important part is the date itself.
-  if (!date) return 'Choose date';
+  if (!date) return getUiString(locale, 'chooseDate');
   const formatted = formatFullDate(date, locale);
-  return `Choose date, current date is ${formatted}`;
+  return `${getUiString(locale, 'chooseDate')}, ${getUiString(locale, 'currentDate')} ${formatted}`;
+}
+
+// ─── Locale-aware UI strings ──────────────────────────────────────────────────
+
+type UiStringKey =
+  | 'dateLabel'
+  | 'chooseDate'
+  | 'currentDate'
+  | 'prevMonth'
+  | 'nextMonth'
+  | 'ok'
+  | 'cancel'
+  | 'unavailable';
+
+/**
+ * Returns a localised UI string for the given key.
+ * Falls back to English when the locale is not in the built-in table.
+ *
+ * Extend this map to support additional languages.
+ */
+export function getUiString(locale: string, key: UiStringKey): string {
+  const lang = locale.split('-')[0]?.toLowerCase() ?? 'en';
+  const strings: Record<string, Record<UiStringKey, string>> = {
+    en: {
+      dateLabel: 'Date',
+      chooseDate: 'Choose date',
+      currentDate: 'current date is',
+      prevMonth: 'Previous month',
+      nextMonth: 'Next month',
+      ok: 'OK',
+      cancel: 'Cancel',
+      unavailable: 'unavailable',
+    },
+    ru: {
+      dateLabel: 'Дата',
+      chooseDate: 'Выбрать дату',
+      currentDate: 'текущая дата',
+      prevMonth: 'Предыдущий месяц',
+      nextMonth: 'Следующий месяц',
+      ok: 'ОК',
+      cancel: 'Отмена',
+      unavailable: 'недоступно',
+    },
+    de: {
+      dateLabel: 'Datum',
+      chooseDate: 'Datum auswählen',
+      currentDate: 'aktuelles Datum',
+      prevMonth: 'Vorheriger Monat',
+      nextMonth: 'Nächster Monat',
+      ok: 'OK',
+      cancel: 'Abbrechen',
+      unavailable: 'nicht verfügbar',
+    },
+    fr: {
+      dateLabel: 'Date',
+      chooseDate: 'Choisir une date',
+      currentDate: 'date actuelle',
+      prevMonth: 'Mois précédent',
+      nextMonth: 'Mois suivant',
+      ok: 'OK',
+      cancel: 'Annuler',
+      unavailable: 'indisponible',
+    },
+  };
+  return (strings[lang] ?? strings['en']!)[key];
 }

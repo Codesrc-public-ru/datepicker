@@ -3,7 +3,23 @@
    All foreground/background contrast ratios meet WCAG 2.1 AA (≥ 4.5:1 for text).
    ───────────────────────────────────────────────────────────────────────────── */
 
+/* ── Visually hidden (screen-reader only) ── */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ── Dialog container ── */
+/* tabIndex={-1} is set in JSX so the dialog can receive programmatic focus
+   for the initial screen-reader announcement. Suppress the visible outline —
+   sighted users never focus the container directly. */
 .dialog {
   position: absolute;
   top: calc(100% + 8px);
@@ -15,6 +31,7 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
   padding: 16px;
   min-width: 280px;
+  outline: none; /* focus is transient (only for AT announcement) */
 }
 
 /* ── Header ── */
@@ -25,8 +42,7 @@
   margin-bottom: 12px;
 }
 
-/* Month/year heading
-   aria-live="polite" aria-atomic="true" is set in JSX.
+/* Month/year heading — aria-live="assertive" is set in JSX.
    #1A1A1A on #ffffff → 15.96:1 (AAA) */
 .monthYearHeading {
   font-size: 1rem;
@@ -51,6 +67,7 @@
   cursor: pointer;
   color: #1a1a1a;
   flex-shrink: 0;
+  padding: 0;
 }
 
 .navButton:focus-visible {
@@ -85,63 +102,94 @@
   padding: 4px 0 8px;
 }
 
-/* ── Date cells ── */
-/* #1A1A1A on #ffffff → 15.96:1 */
+/* ── Date cells (<td>) ──
+   The <td> is a passive container that carries aria state (aria-selected,
+   aria-disabled, aria-current). Visual/interactive styles live on .dayButton.
+   Fixed size ensures every cell occupies the same grid area regardless of
+   whether it is in the current month or not.                                  */
 .td {
   width: 36px;
   height: 36px;
+  padding: 2px; /* gap between cell edge and the circular button */
   text-align: center;
   vertical-align: middle;
-  font-size: 0.875rem;
-  color: #1a1a1a;
-  border-radius: 50%;
-  cursor: pointer;
-  /* 2px transparent border reserves space for the focus ring so layout
-     does not shift when focus arrives. */
-  border: 2px solid transparent;
+  box-sizing: border-box;
+}
+
+/* Outside-current-month: de-emphasise the button text colour */
+.tdOutside .dayButton {
+  color: #767676; /* 4.54:1 on #ffffff — AA */
+}
+
+/* ── Day buttons (<button> inside <td>) ──
+   The button fills the cell, minus the 2 px padding on the td.
+   width/height are computed from td size minus 2×padding = 32px.             */
+
+/* #1A1A1A on #ffffff → 15.96:1 (AAA) */
+.dayButton {
+  /* Reset browser button defaults */
+  -webkit-appearance: none;
+  appearance: none;
+  background: none;
+  border: none;
   padding: 0;
-  outline: none;
+  margin: 0;
+  font: inherit;
+  cursor: pointer;
+  color: #1a1a1a;
+
+  /* Fixed circular size — every button is identical */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 0.875rem;
+  line-height: 1;
+
+  /* Reserve 2 px border for the focus ring so layout doesn't shift */
+  outline: 2px solid transparent;
+  outline-offset: 0;
+
   user-select: none;
 }
 
-.td:focus {
-  /* Replace outline with a visible border so the circle shape is maintained. */
-  border-color: #005fcc; /* 5.98:1 on #ffffff */
+.dayButton:hover:not(.dayButtonDisabled):not(.dayButtonSelected) {
+  background: #e8f0fe; /* #1A1A1A on #e8f0fe → 15.19:1 */
+}
+
+/* Focus ring — visible with keyboard (`:focus-visible`) only */
+.dayButton:focus-visible {
+  outline: 2px solid #005fcc; /* 5.98:1 on #ffffff */
+  outline-offset: 1px;
+}
+
+/* Suppress the default outline (for mouse clicks) */
+.dayButton:focus:not(:focus-visible) {
   outline: none;
 }
 
-.td:hover:not(.tdDisabled):not(.tdSelected) {
-  background: #e8f0fe;
-}
-
-/* Days outside the current month — visible but de-emphasised.
-   #767676 on #ffffff → 4.54:1 (AA) */
-.tdOutside {
-  color: #767676;
-}
-
-/* Today's date — underline + bold to distinguish without relying on colour alone */
-.tdToday {
+/* Today's date — underline + bold (non-colour indicator, WCAG 1.4.1) */
+.dayButtonToday {
   font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
-/* Selected date
-   #ffffff on #0047ab → 8.44:1 (AAA) */
-.tdSelected {
+/* Selected date: #ffffff on #0047ab → 8.44:1 (AAA) */
+.dayButtonSelected {
   background: #0047ab;
   color: #ffffff;
 }
 
-.tdSelected:focus {
-  /* White ring on blue background: #ffffff on #0047ab → 8.44:1 */
-  border-color: #ffffff;
+.dayButtonSelected:focus-visible {
+  /* White ring on blue: #ffffff on #0047ab → 8.44:1 (AAA) */
+  outline-color: #ffffff;
 }
 
-/* Disabled dates
-   #767676 on #ffffff → 4.54:1 (AA) */
-.tdDisabled {
+/* Disabled dates: #767676 on #ffffff → 4.54:1 (AA) */
+.dayButtonDisabled {
   color: #767676;
   cursor: default;
   text-decoration: line-through;
@@ -172,7 +220,7 @@
   outline-offset: 2px;
 }
 
-/* #ffffff on #0047ab → 8.44:1 */
+/* #ffffff on #0047ab → 8.44:1 (AAA) */
 .okButton {
   background: #0047ab;
   color: #ffffff;
@@ -184,7 +232,7 @@
   cursor: default;
 }
 
-/* #0047ab on #ffffff → 8.44:1 */
+/* #0047ab on #ffffff → 8.44:1 (AAA) */
 .cancelButton {
   background: #ffffff;
   color: #0047ab;

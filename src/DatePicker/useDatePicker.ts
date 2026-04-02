@@ -72,6 +72,10 @@ export function useDatePicker(props: DatePickerProps): UseDatePickerReturn {
   // ─── Stable refs ────────────────────────────────────────────────────────────
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  // Always reflects the latest inputValue without being a closure dependency.
+  // Prevents handleInputBlur from reading a stale value when the blur fires
+  // in the same tick as the last onChange (before React re-renders).
+  const inputValueRef = useRef('');
 
   // ─── Core state ─────────────────────────────────────────────────────────────
   const [isOpen, setIsOpen] = useState(false);
@@ -88,6 +92,8 @@ export function useDatePicker(props: DatePickerProps): UseDatePickerReturn {
   const [inputValue, setInputValue] = useState(
     () => (value ? formatShortDate(value, locale) : ''),
   );
+  // Keep ref in sync so handleInputBlur always reads the latest value.
+  inputValueRef.current = inputValue;
 
   // Track the "pending" date while the dialog is open (separate from the
   // committed `value` prop so Escape can discard changes).
@@ -96,16 +102,23 @@ export function useDatePicker(props: DatePickerProps): UseDatePickerReturn {
   );
 
   // ─── Sync when controlled `value` changes ──────────────────────────────────
+  // Use the numeric timestamp as the effect dependency so that a parent
+  // passing `new Date(sameTimestamp)` on every render does NOT re-run the
+  // effect and overwrite what the user typed in the input.
+  const valueTime = value ? toMidnight(value).getTime() : null;
   useEffect(() => {
-    if (value !== undefined) {
-      const v = toMidnight(value);
+    if (valueTime !== null) {
+      const v = new Date(valueTime);
       setInputValue(formatShortDate(v, locale));
       _setFocusedDate(v);
       setViewYear(v.getFullYear());
       setViewMonth(v.getMonth());
       setPendingDate(v);
+    } else {
+      setInputValue('');
+      setPendingDate(undefined);
     }
-  }, [value, locale]);
+  }, [valueTime, locale]);
 
   // ─── Return focus to trigger after dialog closes ────────────────────────────
   useEffect(() => {
@@ -160,12 +173,18 @@ export function useDatePicker(props: DatePickerProps): UseDatePickerReturn {
   // ─── Open / close ────────────────────────────────────────────────────────────
 
   const openDialog = useCallback(() => {
-    const base = toMidnight(value ?? today);
+    // Show the value's actual month WITHOUT clamping, so an out-of-range
+    // programmatic value shows that month with disabled cells instead of
+    // jumping to the nearest valid month.
+    const base = value ? toMidnight(value) : toMidnight(today);
     _setFocusedDate(base);
-    setView(base.getFullYear(), base.getMonth());
-    setPendingDate(value ? toMidnight(value) : undefined);
+    // Use the raw state setters (not the setView callback) to guarantee
+    // no stale-closure skew between focusedDate and the view.
+    setViewYear(base.getFullYear());
+    setViewMonth(base.getMonth());
+    setPendingDate(value ? base : undefined);
     setIsOpen(true);
-  }, [value, today, setView]);
+  }, [value, today, setViewYear, setViewMonth]);
 
   const closeDialogStable = useCallback(
     (commit: boolean) => {
@@ -199,18 +218,28 @@ export function useDatePicker(props: DatePickerProps): UseDatePickerReturn {
   );
 
   const handleInputBlur = useCallback(() => {
-    const parsed = parseShortDate(inputValue, locale);
+    const trimmed = inputValueRef.current.trim();
+
+    // Empty input → clear the date.
+    if (trimmed === '') {
+      onChange(null);
+      setInputValue('');
+      return;
+    }
+
+    const parsed = parseShortDate(trimmed, locale);
     if (parsed) {
       const clamped = clampDate(parsed, minDate, maxDate);
       onChange(clamped);
       setInputValue(formatShortDate(clamped, locale));
       _setFocusedDate(clamped);
-      setView(clamped.getFullYear(), clamped.getMonth());
+      setViewYear(clamped.getFullYear());
+      setViewMonth(clamped.getMonth());
     } else {
-      // Revert to last known good value
+      // Unparseable input — revert to last known good value.
       setInputValue(value ? formatShortDate(value, locale) : '');
     }
-  }, [inputValue, locale, minDate, maxDate, onChange, value, setView]);
+  }, [locale, minDate, maxDate, onChange, value, setViewYear, setViewMonth]);
 
   // ─── Derived values ──────────────────────────────────────────────────────────
 
@@ -225,7 +254,7 @@ export function useDatePicker(props: DatePickerProps): UseDatePickerReturn {
   const firstDayOfWeek = useMemo(() => getFirstDayOfWeek(locale), [locale]);
 
   return {
-    selectedDate: value,
+    selectedDate: value ?? undefined,
     isOpen,
     openDialog,
     closeDialog: closeDialogStable,
