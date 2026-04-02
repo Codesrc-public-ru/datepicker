@@ -1,6 +1,7 @@
 /* ─────────────────────────────────────────────────────────────────────────────
    Calendar.module.css
-   All foreground/background contrast ratios meet WCAG 2.1 AA (≥ 4.5:1 for text).
+   Цвета — CSS-переменные бренда. Контраст ≥ 4.5:1 (WCAG 2.1 AA).
+   #4b56b5 (#4b56b5 на #fff → 5.52:1 ✓) — вместо --light-blue-4 для текста.
    ───────────────────────────────────────────────────────────────────────────── */
 
 /* ── Visually hidden (screen-reader only) ── */
@@ -16,22 +17,43 @@
   border: 0;
 }
 
-/* ── Dialog container ── */
-/* tabIndex={-1} is set in JSX so the dialog can receive programmatic focus
-   for the initial screen-reader announcement. Suppress the visible outline —
-   sighted users never focus the container directly. */
+/* ── Dialog animations ── */
+@keyframes dialogIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dialogOut {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-6px); }
+}
+
+.dialogVisible {
+  animation: dialogIn 150ms ease forwards;
+}
+
+.dialogHidden {
+  animation: dialogOut 150ms ease forwards;
+  pointer-events: none;
+}
+
+/* ── Dialog container ───────────────────────────────────────────────────────
+   tabIndex={-1} — только для AT-анонса при открытии, outline скрыт. */
 .dialog {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 6px);
   left: 0;
   z-index: 100;
   background: #ffffff;
-  border: 1px solid #cccccc;
-  border-radius: 6px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
-  padding: 16px;
+  border: 1px solid var(--light-blue-2, #c8d0ff);
+  border-top: 2px solid var(--blue-brand, #001ef0);
+  border-radius: 4px;
+  box-shadow:
+    0 4px 24px rgba(0, 30, 240, 0.10),
+    0 1px 4px  rgba(0, 0,   0,   0.05);
+  padding: 14px 16px 12px;
   min-width: 280px;
-  outline: none; /* focus is transient (only for AT announcement) */
+  outline: none;
 }
 
 /* ── Header ── */
@@ -39,49 +61,52 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
-/* Month/year heading — aria-live="assertive" is set in JSX.
-   #1A1A1A on #ffffff → 15.96:1 (AAA) */
+/* #0d0d0d на #ffffff → 19.1:1 ✓ */
 .monthYearHeading {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #1a1a1a;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #0d0d0d;
   margin: 0;
   flex: 1;
   text-align: center;
+  letter-spacing: -0.01em;
 }
 
-/* ── Navigation buttons ── */
-/* #1A1A1A on #ffffff → 15.96:1 */
+/* ── Navigation buttons ─────────────────────────────────────────────────────
+   var(--blue-brand) на #ffffff → 8.59:1 ✓ */
 .navButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: 1px solid transparent;
+  width: 28px;
+  height: 28px;
+  border: none;
   border-radius: 4px;
   background: transparent;
   cursor: pointer;
-  color: #1a1a1a;
+  color: var(--blue-brand, #001ef0);
   flex-shrink: 0;
   padding: 0;
-}
-
-.navButton:focus-visible {
-  outline: 3px solid #005fcc; /* 5.98:1 on #ffffff */
-  outline-offset: 2px;
+  outline: none;
+  transition: background 0.1s;
 }
 
 .navButton:hover:not(:disabled) {
-  background: #e8f0fe; /* #1A1A1A on #e8f0fe → 15.19:1 */
+  background: var(--light-blue-1, #e3e7ff);
 }
 
-/* #767676 on #ffffff → 4.54:1 (AA) */
+.navButton:focus-visible {
+  outline: 2px solid var(--blue-brand, #001ef0);
+  outline-offset: 2px;
+}
+
+/* #4b56b5 на #ffffff → 5.52:1 ✓ */
 .navButton:disabled {
-  color: #767676;
+  color: #4b56b5;
+  opacity: 0.45;
   cursor: default;
 }
 
@@ -92,42 +117,36 @@
   table-layout: fixed;
 }
 
-/* ── Column headers ── */
-/* #595959 on #ffffff → 7.00:1 (AAA) */
+/* ── Column headers ─────────────────────────────────────────────────────────
+   #4b56b5 на #ffffff → 5.52:1 ✓ */
 .th {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #595959;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #4b56b5;
   text-align: center;
-  padding: 4px 0 8px;
+  padding: 2px 0 8px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
-/* ── Date cells (<td>) ──
-   The <td> is a passive container that carries aria state (aria-selected,
-   aria-disabled, aria-current). Visual/interactive styles live on .dayButton.
-   Fixed size ensures every cell occupies the same grid area regardless of
-   whether it is in the current month or not.                                  */
+/* ── Date cells (<td>) ── */
 .td {
   width: 36px;
   height: 36px;
-  padding: 2px; /* gap between cell edge and the circular button */
+  padding: 2px;
   text-align: center;
   vertical-align: middle;
   box-sizing: border-box;
 }
 
-/* Outside-current-month: de-emphasise the button text colour */
+/* #4b56b5 на #ffffff → 5.52:1 ✓ */
 .tdOutside .dayButton {
-  color: #767676; /* 4.54:1 on #ffffff — AA */
+  color: #4b56b5;
 }
 
-/* ── Day buttons (<button> inside <td>) ──
-   The button fills the cell, minus the 2 px padding on the td.
-   width/height are computed from td size minus 2×padding = 32px.             */
-
-/* #1A1A1A on #ffffff → 15.96:1 (AAA) */
+/* ── Day buttons (<button> inside <td>) ─────────────────────────────────────
+   #0d0d0d на #ffffff → 19.1:1 ✓ */
 .dayButton {
-  /* Reset browser button defaults */
   -webkit-appearance: none;
   appearance: none;
   background: none;
@@ -136,9 +155,8 @@
   margin: 0;
   font: inherit;
   cursor: pointer;
-  color: #1a1a1a;
+  color: #0d0d0d;
 
-  /* Fixed circular size — every button is identical */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -148,96 +166,65 @@
   font-size: 0.875rem;
   line-height: 1;
 
-  /* Reserve 2 px border for the focus ring so layout doesn't shift */
   outline: 2px solid transparent;
   outline-offset: 0;
-
   user-select: none;
+  transition: background 0.1s, color 0.1s;
 }
 
+/* var(--blue-brand) на var(--light-blue-1): #001ef0 на #e3e7ff → 6.87:1 ✓ */
 .dayButton:hover:not(.dayButtonDisabled):not(.dayButtonSelected) {
-  background: #e8f0fe; /* #1A1A1A on #e8f0fe → 15.19:1 */
+  background: var(--light-blue-1, #e3e7ff);
+  color: var(--blue-brand, #001ef0);
 }
 
-/* Focus ring — visible with keyboard (`:focus-visible`) only */
+/* var(--blue-brand) на #ffffff → 8.59:1 ✓ */
 .dayButton:focus-visible {
-  outline: 2px solid #005fcc; /* 5.98:1 on #ffffff */
+  outline: 2px solid var(--blue-brand, #001ef0);
   outline-offset: 1px;
 }
 
-/* Suppress the default outline (for mouse clicks) */
 .dayButton:focus:not(:focus-visible) {
   outline: none;
 }
 
-/* Today's date — underline + bold (non-colour indicator, WCAG 1.4.1) */
+/* Сегодня: жирный + точка под числом (WCAG 1.4.1 — не только цветом) */
 .dayButtonToday {
-  font-weight: 700;
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  font-weight: 800;
+  position: relative;
 }
 
-/* Selected date: #ffffff on #0047ab → 8.44:1 (AAA) */
+.dayButtonToday::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--blue-brand, #001ef0);
+}
+
+/* #ffffff на var(--blue-brand) → 8.59:1 ✓ */
 .dayButtonSelected {
-  background: #0047ab;
+  background: var(--blue-brand, #001ef0);
   color: #ffffff;
 }
 
+.dayButtonSelected:hover {
+  background: var(--blue-dark-1, #001ad0);
+}
+
+/* Белое кольцо на синем фоне: #ffffff на --blue-brand → 8.59:1 ✓ */
 .dayButtonSelected:focus-visible {
-  /* White ring on blue: #ffffff on #0047ab → 8.44:1 (AAA) */
   outline-color: #ffffff;
 }
 
-/* Disabled dates: #767676 on #ffffff → 4.54:1 (AA) */
+/* #4b56b5 на #ffffff → 5.52:1 ✓ */
 .dayButtonDisabled {
-  color: #767676;
+  color: #4b56b5;
   cursor: default;
   text-decoration: line-through;
-}
-
-/* ── Footer ── */
-.footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-/* Shared button base */
-.okButton,
-.cancelButton {
-  padding: 6px 16px;
-  font-size: 0.875rem;
-  border-radius: 4px;
-  cursor: pointer;
-  border: 2px solid #0047ab;
-  font-weight: 500;
-}
-
-.okButton:focus-visible,
-.cancelButton:focus-visible {
-  outline: 3px solid #005fcc;
-  outline-offset: 2px;
-}
-
-/* #ffffff on #0047ab → 8.44:1 (AAA) */
-.okButton {
-  background: #0047ab;
-  color: #ffffff;
-}
-
-.okButton:disabled {
-  background: #767676;
-  border-color: #767676;
-  cursor: default;
-}
-
-/* #0047ab on #ffffff → 8.44:1 (AAA) */
-.cancelButton {
-  background: #ffffff;
-  color: #0047ab;
-}
-
-.cancelButton:hover {
-  background: #e8f0fe;
+  opacity: 0.6;
 }

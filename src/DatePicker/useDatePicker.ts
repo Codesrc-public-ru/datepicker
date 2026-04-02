@@ -16,8 +16,10 @@ import {
   toMidnight,
 } from './utils/dateUtils';
 import {
+  applyDateMask,
   formatShortDate,
   formatTriggerAriaLabel,
+  getDateSeparator,
   getFirstDayOfWeek,
   parseShortDate,
 } from './utils/intlUtils';
@@ -63,7 +65,6 @@ export function useDatePicker(props: DatePickerProps): UseDatePickerReturn {
     onChange,
     minDate,
     maxDate,
-    disabledDates,
     locale = 'en-US',
   } = props;
 
@@ -210,11 +211,19 @@ export function useDatePicker(props: DatePickerProps): UseDatePickerReturn {
 
   // ─── Text input ──────────────────────────────────────────────────────────────
 
+  const sep = useMemo(() => getDateSeparator(locale), [locale]);
+
   const handleInputChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
-      setInputValue(e.target.value);
+      const raw = e.target.value;
+      // When the user is deleting (raw is shorter than current value), pass
+      // through unchanged so backspace doesn't fight the mask.
+      const prev = inputValueRef.current;
+      const masked =
+        raw.length < prev.length ? raw : applyDateMask(raw, sep);
+      setInputValue(masked);
     },
-    [],
+    [sep],
   );
 
   const handleInputBlur = useCallback(() => {

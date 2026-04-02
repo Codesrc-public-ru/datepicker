@@ -57,6 +57,7 @@ export function DatePicker(props: DatePickerProps): React.ReactElement {
         onFocusedDateChange: state.updateFocusedDate,
         onConfirm: state.confirmDate,
         onClose: state.closeDialog,
+        triggerRef: state.triggerRef,
       } : undefined}
     />
   );

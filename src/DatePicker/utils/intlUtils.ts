@@ -210,6 +210,34 @@ export function parseShortDate(str: string, locale: string): Date | null {
   return date;
 }
 
+// ─── Input mask helpers ───────────────────────────────────────────────────────
+
+/**
+ * Returns the literal separator character used in the locale's short date
+ * format (e.g. "." for ru-RU/de-DE, "/" for en-US/fr-FR).
+ */
+export function getDateSeparator(locale: string): string {
+  const knownDate = new Date(2001, 2, 4);
+  const parts = new Intl.DateTimeFormat(locale, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(knownDate);
+  return parts.find((p) => p.type === 'literal')?.value ?? '.';
+}
+
+/**
+ * Applies an auto-formatting mask to a raw input value.
+ * Strips all non-digits, keeps at most 8, then inserts `sep` after positions 2 and 4.
+ * Works uniformly for DD.MM.YYYY and MM/DD/YYYY layouts.
+ */
+export function applyDateMask(raw: string, sep: string): string {
+  const digits = raw.replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}${sep}${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}${sep}${digits.slice(2, 4)}${sep}${digits.slice(4)}`;
+}
+
 // ─── Trigger aria-label ───────────────────────────────────────────────────────
 
 /**

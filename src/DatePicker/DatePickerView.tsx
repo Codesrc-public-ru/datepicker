@@ -5,10 +5,15 @@
  * состояния и побочных эффектов — только JSX. Тестируется изолированно
  * без моков хуков или контекста.
  */
-import React, { ChangeEvent, RefObject } from 'react';
+import React, { ChangeEvent, RefObject, useEffect, useRef, useState } from 'react';
+import cn from 'classnames';
 import { Calendar } from './Calendar';
 import type { CalendarProps } from './Calendar';
 import styles from './DatePicker.module.css';
+import calStyles from './Calendar.module.css';
+import globalStyles from '../styles.module.css';
+
+const CLOSE_DURATION_MS = 150;
 
 export interface DatePickerViewProps {
   // IDs
@@ -52,13 +57,46 @@ export function DatePickerView({
   onTriggerClick,
   calendarProps,
 }: DatePickerViewProps): React.ReactElement {
+  // Keep Calendar mounted during the closing animation.
+  // `visible` = CSS class that plays fadeIn; once isOpen flips to false we
+  // switch to the fadeOut class and remove from DOM after the transition ends.
+  const [mounted, setMounted] = useState(isOpen);
+  const [visible, setVisible] = useState(isOpen);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      // Cancel any in-progress close animation.
+      if (closeTimerRef.current !== null) {
+        clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = null;
+      }
+      setMounted(true);
+      // One rAF so the element is in the DOM before we add the visible class.
+      requestAnimationFrame(() => setVisible(true));
+    } else {
+      setVisible(false);
+      closeTimerRef.current = setTimeout(() => {
+        setMounted(false);
+        closeTimerRef.current = null;
+      }, CLOSE_DURATION_MS);
+    }
+    return () => {
+      if (closeTimerRef.current !== null) clearTimeout(closeTimerRef.current);
+    };
+  }, [isOpen]);
+
   return (
     <div className={styles.wrapper}>
-      <div className={styles.inputRow}>
+      <div className={styles.labelRow}>
         <label htmlFor={inputId} className={styles.label}>
           {dateLabel}
         </label>
-
+        <span id={hintId} className={styles.hint}>
+          {formatHint}
+        </span>
+      </div>
+      <div className={styles.inputRow}>
         <input
           id={inputId}
           ref={inputRef}
@@ -69,7 +107,7 @@ export function DatePickerView({
           onBlur={onInputBlur}
           aria-describedby={hintId}
           autoComplete="off"
-          className={styles.input}
+          className={cn(styles.input, globalStyles.ibmPlexMonoRegular)}
         />
 
         <button
@@ -93,12 +131,12 @@ export function DatePickerView({
           </svg>
         </button>
       </div>
-
-      <span id={hintId} className={styles.hint}>
-        {formatHint}
-      </span>
-
-      {isOpen && calendarProps && <Calendar {...calendarProps} />}
+      {mounted && calendarProps && (
+        <Calendar
+          {...calendarProps}
+          dialogClassName={visible ? calStyles.dialogVisible : calStyles.dialogHidden}
+        />
+      )}
     </div>
   );
 }

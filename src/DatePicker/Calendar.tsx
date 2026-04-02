@@ -48,6 +48,12 @@ export interface CalendarProps {
   onFocusedDateChange: (date: Date) => void;
   onConfirm: (date: Date) => void;
   onClose: (commit: boolean) => void;
+  /** Ref to the trigger button — excluded from click-outside detection to
+   *  prevent the pointerdown→close race with the trigger's own click handler. */
+  triggerRef: React.RefObject<HTMLButtonElement>;
+  /** Extra class applied to the dialog root — used by the parent to drive
+   *  enter/leave CSS animations without unmounting the component early. */
+  dialogClassName?: string;
 }
 
 export function Calendar(props: CalendarProps): React.ReactElement {
@@ -67,6 +73,8 @@ export function Calendar(props: CalendarProps): React.ReactElement {
     onFocusedDateChange,
     onConfirm,
     onClose,
+    triggerRef,
+    dialogClassName,
   } = props;
 
   const titleId = useId();
@@ -86,15 +94,22 @@ export function Calendar(props: CalendarProps): React.ReactElement {
   useFocusTrap(dialogRef, true);
 
   // Закрытие по клику вне диалога.
+  // Триггер исключён: его собственный click-handler управляет toggle,
+  // и обработка pointerdown до него вызывала моргание (close → open).
   useEffect(() => {
     function handlePointerDown(e: PointerEvent): void {
-      if (dialogRef.current && !dialogRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        dialogRef.current &&
+        !dialogRef.current.contains(target) &&
+        !triggerRef.current?.contains(target)
+      ) {
         onClose(false);
       }
     }
     document.addEventListener('pointerdown', handlePointerDown);
     return () => document.removeEventListener('pointerdown', handlePointerDown);
-  }, [onClose]);
+  }, [onClose, triggerRef]);
 
   // Управление фокусом:
   //   mount  → сначала на диалог (AT объявляет «dialog: [месяц год]»),
@@ -227,13 +242,6 @@ export function Calendar(props: CalendarProps): React.ReactElement {
     onNextMonth();
   }
 
-  const focusedCellDisabled =
-    gridData.rows.flat().find((c) => c.isFocused)?.isDisabled ?? false;
-
-  function handleOk(): void {
-    if (!focusedCellDisabled) onConfirm(focusedDate);
-  }
-
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div
@@ -243,7 +251,7 @@ export function Calendar(props: CalendarProps): React.ReactElement {
       aria-labelledby={titleId}
       tabIndex={-1}
       onKeyDown={handleDialogKeyDown}
-      className={styles.dialog}
+      className={[styles.dialog, dialogClassName].filter(Boolean).join(' ')}
     >
       {/* Скрытый assertive live-регион: объявляет смену месяца только
           при клике на кнопки навигации. */}
@@ -309,24 +317,6 @@ export function Calendar(props: CalendarProps): React.ReactElement {
           ))}
         </tbody>
       </table>
-
-      <div className={styles.footer}>
-        <button
-          type="button"
-          onClick={handleOk}
-          disabled={focusedCellDisabled}
-          className={styles.okButton}
-        >
-          {i18n.ok}
-        </button>
-        <button
-          type="button"
-          onClick={() => onClose(false)}
-          className={styles.cancelButton}
-        >
-          {i18n.cancel}
-        </button>
-      </div>
     </div>
   );
 }

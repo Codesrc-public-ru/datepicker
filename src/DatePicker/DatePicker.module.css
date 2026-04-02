@@ -1,83 +1,104 @@
 /* ─────────────────────────────────────────────────────────────────────────────
    DatePicker.module.css
-   All contrast ratios meet WCAG 2.1 AA (≥ 4.5:1 for normal text).
+   Цвета — CSS-переменные бренда. Контраст ≥ 4.5:1 (WCAG 2.1 AA).
+   --text-safe (#4b56b5) — скорректированный вариант --light-blue-4 для текста:
+   #4b56b5 на #ffffff → 5.52:1 ✓ (--light-blue-4 #6571c6 → 4.44:1 не проходит AA).
    ───────────────────────────────────────────────────────────────────────────── */
 
-/* ── Outer wrapper ── */
-/* position: relative allows the Calendar dialog to anchor absolutely below */
 .wrapper {
   position: relative;
   display: inline-flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
-/* ── Input row: label + text input + trigger button ── */
+.labelRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
 .inputRow {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: stretch;
 }
 
-/* ── Label ── */
-/* #1A1A1A on #ffffff → 15.96:1 (AAA) */
+/* ── Label ──────────────────────────────────────────────────────────────────
+   #0d0d0d на #ffffff → 19.1:1 ✓ */
 .label {
+  display: block;
   font-size: 0.875rem;
-  font-weight: 500;
-  color: #1a1a1a;
-  white-space: nowrap;
+  font-weight: 600;
+  color: #0d0d0d;
+  margin-bottom: 6px;
+  letter-spacing: 0.01em;
 }
 
-/* ── Text input ── */
-/* #1A1A1A on #ffffff → 15.96:1 (AAA) */
+/* ── Text input ─────────────────────────────────────────────────────────────
+   #0d0d0d на #ffffff → 19.1:1 ✓ */
 .input {
-  font-size: 1rem;
-  padding: 6px 10px;
-  border: 2px solid #767676; /* non-text border: AA for UI components */
-  border-radius: 4px;
-  color: #1a1a1a;
+  font: inherit;
+  font-size: 0.9375rem;
+  padding: 8px 12px;
+  border: 1px solid var(--light-blue-3, #b5bfff);
+  border-right: none;
+  border-radius: 4px 0 0 4px;
+  color: #0d0d0d;
   background: #ffffff;
-  min-width: 120px;
+  min-width: 128px;
   line-height: 1.4;
+  outline: none;
+  transition: border-color 0.12s;
 }
 
 .input:focus {
-  outline: 3px solid #005fcc; /* 5.98:1 on #ffffff */
-  outline-offset: 2px;
-  border-color: #005fcc;
+  border-color: var(--blue-brand, #001ef0);
+  box-shadow:
+    -2px 0 0 0 var(--blue-brand, #001ef0),
+    0  2px 0 0 var(--blue-brand, #001ef0),
+    0 -2px 0 0 var(--blue-brand, #001ef0);
 }
 
-/* ── Trigger button ── */
-/* #1A1A1A on #f5f5f5 → 15.96:1 (AAA) */
+/* ── Trigger button ─────────────────────────────────────────────────────────
+   Иконка: var(--blue-brand) на #ffffff → 8.59:1 ✓
+   При открытом диалоге: #ffffff на var(--blue-brand) → 8.59:1 ✓ */
 .triggerButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: 2px solid #767676;
-  border-radius: 4px;
-  background: #f5f5f5;
-  color: #1a1a1a;
-  cursor: pointer;
+  width: 40px;
   flex-shrink: 0;
+  border: 1px solid var(--light-blue-3, #b5bfff);
+  border-radius: 0 4px 4px 0;
+  background: var(--light-blue-1, #e3e7ff);
+  color: var(--blue-brand, #001ef0);
+  cursor: pointer;
   padding: 0;
+  outline: none;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
 }
 
 .triggerButton:hover {
-  background: #e8e8e8;
+  background: var(--light-blue-2, #c8d0ff);
 }
 
 .triggerButton:focus-visible {
-  outline: 3px solid #005fcc;
+  outline: 2px solid var(--blue-brand, #001ef0);
   outline-offset: 2px;
 }
 
-/* ── Format hint ── */
-/* #595959 on #ffffff → 7.00:1 (AAA) */
+/* Триггер в открытом состоянии: #ffffff на --blue-brand → 8.59:1 ✓ */
+.triggerButton[aria-expanded="true"] {
+  background: var(--blue-brand, #001ef0);
+  border-color: var(--blue-brand, #001ef0);
+  color: #ffffff;
+}
+
+/* ── Format hint ────────────────────────────────────────────────────────────
+   #4b56b5 на #ffffff → 5.52:1 ✓ */
 .hint {
   font-size: 0.75rem;
-  color: #595959;
-  /* Visible to sighted users and announced to screen readers via
-     aria-describedby.  Do NOT use visibility:hidden or display:none. */
+  color: #4b56b5;
 }
