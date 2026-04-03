@@ -10,6 +10,7 @@ import {
   formatFullDate,
   formatMonthYear,
   getFirstDayOfWeek,
+  getUiString,
   getWeekdayHeaders,
 } from './utils/intlUtils';
 
@@ -61,17 +62,25 @@ export function useCalendarGrid(params: UseCalendarGridParams): CalendarGridData
     const rawGrid = buildCalendarGrid(viewYear, viewMonth, firstDayOfWeek);
 
     return rawGrid.map((rawRow) =>
-      rawRow.map(
-        (rawCell): CalendarCell => ({
+      rawRow.map((rawCell): CalendarCell => {
+        const isSelected = selectedDate ? isSameDay(rawCell.date, selectedDate) : false;
+        const isDisabled = isDateDisabled(rawCell.date, minDate, maxDate, disabledDates);
+        const labelParts = [
+          formatFullDate(rawCell.date, locale),
+          isSelected ? getUiString(locale, 'selected') : null,
+          isDisabled ? getUiString(locale, 'unavailable') : null,
+        ].filter(Boolean);
+
+        return {
           date: rawCell.date,
           isCurrentMonth: rawCell.isCurrentMonth,
           isToday: isToday(rawCell.date),
-          isSelected: selectedDate ? isSameDay(rawCell.date, selectedDate) : false,
-          isDisabled: isDateDisabled(rawCell.date, minDate, maxDate, disabledDates),
+          isSelected,
+          isDisabled,
           isFocused: isSameDay(rawCell.date, focusedDate),
-          ariaLabel: formatFullDate(rawCell.date, locale),
-        }),
-      ),
+          ariaLabel: labelParts.join(', '),
+        };
+      }),
     );
   }, [
     viewYear,

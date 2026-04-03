@@ -4,11 +4,11 @@ import { RefObject, useEffect } from 'react';
  * Traps keyboard focus within `containerRef` while `isActive` is true.
  *
  * Tab cycles forward through focusable elements; Shift+Tab cycles backward.
- * Because the calendar grid uses roving tabindex, only the one <td> with
- * tabIndex=0 appears in the tab sequence at any time.
+ * Because the calendar grid uses roving tabindex, only the active day button
+ * enters the tab sequence at any time.
  *
  * Effective tab order inside the dialog:
- *   prevMonthBtn → nextMonthBtn → activeTd → okBtn → cancelBtn → (wrap)
+ *   prevMonthBtn → nextMonthBtn → activeDayBtn → (wrap)
  */
 export function useFocusTrap(
   containerRef: RefObject<HTMLElement | null>,
@@ -46,11 +46,9 @@ export function useFocusTrap(
           e.preventDefault();
           last.focus();
         }
-      } else {
-        if (active === last) {
-          e.preventDefault();
-          first.focus();
-        }
+      } else if (active === last) {
+        e.preventDefault();
+        first.focus();
       }
     }
 
