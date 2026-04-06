@@ -8,16 +8,13 @@
  *  - обработка клавиатуры (Event Switch)
  *  - вычисление данных грида через useCalendarGrid
  *
- * Рендер делегирует атомарным компонентам NavButton и DayButton.
- */
-import React, {
-  KeyboardEvent,
-  useEffect,
-  useId,
-  useRef,
-} from 'react';
+ * Рендер делегирует атомарным компонентам NavButton и DayButton. */
+import React, { KeyboardEvent, useEffect, useId, useRef } from 'react';
+import { DayButton } from './DayButton';
+import { NavButton } from './NavButton';
 import { useCalendarGrid } from './useCalendarGrid';
 import { useFocusTrap } from './useFocusTrap';
+import type { CalendarCell } from './types';
 import {
   addDays,
   addMonths,
@@ -27,9 +24,6 @@ import {
   startOfWeek,
 } from './utils/dateUtils';
 import { getFirstDayOfWeek, getUiString } from './utils/intlUtils';
-import { NavButton } from './NavButton';
-import { DayButton } from './DayButton';
-import type { CalendarCell } from './types';
 import styles from './Calendar.module.css';
 
 export interface CalendarProps {
@@ -82,20 +76,15 @@ export function Calendar(props: CalendarProps): React.ReactElement {
   const tbodyRef = useRef<HTMLTableSectionElement | null>(null);
   const monthChangedByNavRef = useRef(false);
   const [liveText, setLiveText] = React.useState('');
+  const isMountRef = useRef(true);
 
   const i18n = {
     prevMonth: getUiString(locale, 'prevMonth'),
     nextMonth: getUiString(locale, 'nextMonth'),
-    ok: getUiString(locale, 'ok'),
-    cancel: getUiString(locale, 'cancel'),
-    unavailable: getUiString(locale, 'unavailable'),
   };
 
   useFocusTrap(dialogRef, true);
 
-  // Закрытие по клику вне диалога.
-  // Триггер исключён: его собственный click-handler управляет toggle,
-  // и обработка pointerdown до него вызывала моргание (close → open).
   useEffect(() => {
     function handlePointerDown(e: PointerEvent): void {
       const target = e.target as Node;
@@ -111,12 +100,6 @@ export function Calendar(props: CalendarProps): React.ReactElement {
     return () => document.removeEventListener('pointerdown', handlePointerDown);
   }, [onClose, triggerRef]);
 
-  // Управление фокусом:
-  //   mount  → сначала на диалог (AT объявляет «dialog: [месяц год]»),
-  //            затем requestAnimationFrame → на кнопку ячейки.
-  //   далее  → на кнопку сразу при смене focusedDate.
-  const isMountRef = useRef(true);
-
   useEffect(() => {
     if (isMountRef.current) {
       isMountRef.current = false;
@@ -128,6 +111,7 @@ export function Calendar(props: CalendarProps): React.ReactElement {
       });
       return;
     }
+
     tbodyRef.current
       ?.querySelector<HTMLElement>('button[tabindex="0"]')
       ?.focus();
@@ -290,7 +274,6 @@ export function Calendar(props: CalendarProps): React.ReactElement {
           </tr>
         </thead>
         <tbody ref={tbodyRef}>
-          {/* Array as Children — паттерн «Массив как дочерние элементы» */}
           {gridData.rows.map((row, rowIdx) => (
             <tr key={rowIdx}>
               {row.map((cell) => (
@@ -307,7 +290,6 @@ export function Calendar(props: CalendarProps): React.ReactElement {
                 >
                   <DayButton
                     cell={cell}
-                    unavailableLabel={i18n.unavailable}
                     onKeyDown={(e) => handleGridKeyDown(e, cell)}
                     onConfirm={onConfirm}
                   />

@@ -25,8 +25,10 @@ export function NavButton({ direction, label, disabled, onClick }: NavButtonProp
     <button
       type="button"
       aria-label={label}
-      disabled={disabled}
-      onClick={onClick}
+      aria-disabled={disabled ? true : undefined}
+      onClick={() => {
+        if (!disabled){onClick()};
+      }}
       className={styles.navButton}
     >
       <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">

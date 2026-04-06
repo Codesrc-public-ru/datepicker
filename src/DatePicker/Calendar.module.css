@@ -94,7 +94,7 @@
   transition: background 0.1s;
 }
 
-.navButton:hover:not(:disabled) {
+.navButton:hover:not([aria-disabled='true']) {
   background: var(--light-blue-1, #e3e7ff);
 }
 
@@ -104,7 +104,7 @@
 }
 
 /* #4b56b5 на #ffffff → 5.52:1 ✓ */
-.navButton:disabled {
+.navButton[aria-disabled='true'] {
   color: #4b56b5;
   opacity: 0.45;
   cursor: default;

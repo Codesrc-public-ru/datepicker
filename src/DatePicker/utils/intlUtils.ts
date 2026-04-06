@@ -66,7 +66,7 @@ export function getWeekdayHeaders(locale: string): WeekdayHeader[] {
 
   // Rotate so that firstDow comes first
   const offset = firstDow; // 0 = Sun already first; 1 = Mon needs rotation
-  return [...all.slice(offset), ...all.slice(0, offset)];
+  return [...all.slice(firstDow), ...all.slice(0, firstDow)];
 }
 
 // ─── Date formatting ─────────────────────────────────────────────────────────
@@ -264,6 +264,7 @@ type UiStringKey =
   | 'nextMonth'
   | 'ok'
   | 'cancel'
+  | 'selected'
   | 'unavailable';
 
 /**
@@ -283,6 +284,7 @@ export function getUiString(locale: string, key: UiStringKey): string {
       nextMonth: 'Next month',
       ok: 'OK',
       cancel: 'Cancel',
+      selected: 'selected',
       unavailable: 'unavailable',
     },
     ru: {
@@ -293,6 +295,7 @@ export function getUiString(locale: string, key: UiStringKey): string {
       nextMonth: 'Следующий месяц',
       ok: 'ОК',
       cancel: 'Отмена',
+      selected: 'выбрано',
       unavailable: 'недоступно',
     },
     de: {
@@ -303,6 +306,7 @@ export function getUiString(locale: string, key: UiStringKey): string {
       nextMonth: 'Nächster Monat',
       ok: 'OK',
       cancel: 'Abbrechen',
+      selected: 'ausgewählt',
       unavailable: 'nicht verfügbar',
     },
     fr: {
@@ -313,6 +317,7 @@ export function getUiString(locale: string, key: UiStringKey): string {
       nextMonth: 'Mois suivant',
       ok: 'OK',
       cancel: 'Annuler',
+      selected: 'sélectionnée',
       unavailable: 'indisponible',
     },
   };

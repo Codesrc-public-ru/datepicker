@@ -21,7 +21,7 @@ export interface CalendarCell {
   isDisabled: boolean;
   /** true on the single cell that holds tabIndex=0 (roving tabindex) */
   isFocused: boolean;
-  /** Full locale date string for screen reader aria-label */
+  /** Localized screen-reader label with state, e.g. selected / unavailable */
   ariaLabel: string;
 }
 
