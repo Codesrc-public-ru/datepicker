@@ -52,10 +52,9 @@
 ## Установка и запуск
 
 ```bash
-npm install
-npm start      # dev-сервер
-npm test       # тесты
-npm run build  # production-сборка
+yarn install
+yarn start      # dev-сервер
+yarn run build  # production-сборка
 ```
 
 ---
