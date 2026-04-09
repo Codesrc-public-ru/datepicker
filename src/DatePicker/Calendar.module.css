@@ -210,9 +210,12 @@
   background: var(--blue-dark-1, #001ad0);
 }
 
-/* Белое кольцо на синем фоне: #ffffff на --blue-brand → 8.59:1 ✓ */
+/* Двойное кольцо: белый outline отделяет синюю кнопку от кольца,
+   box-shadow снаружи отделяет белое кольцо от светлого фона календаря. */
 .dayButtonSelected:focus-visible {
-  outline-color: #ffffff;
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px var(--blue-brand, #001ef0);
 }
 
 /* #4b56b5 на #ffffff → 5.52:1 ✓ */
